@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, catalog, projects
+from app.api import auth, catalog, plan, projects
 from app.core.config import settings
 
 app = FastAPI(
@@ -27,3 +27,4 @@ def health():
 app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(catalog.router)
+app.include_router(plan.router)
