@@ -21,6 +21,7 @@ class PlanHeader(BaseModel):
     company: Ref | None
     currency: Ref | None
     active: bool
+    state: str  # draft | baseline | approved | execution | closed
     baseline_date: str | None
     baseline_locked: bool
     baseline_locked_at: str | None
@@ -49,6 +50,7 @@ class PlanLine(BaseModel):
     late_finish_day: int | None
     actual_start: str | None
     actual_finish: str | None
+    progress_pct: float
     is_critical: bool
     milestone_category: str | None  # internal | control | contractual
     labor_crew: Ref | None
@@ -70,7 +72,7 @@ class PlanOut(BaseModel):
 
 
 PLAN_FIELDS = [
-    "id", "name", "project_id", "company_id", "currency_id", "active",
+    "id", "name", "project_id", "company_id", "currency_id", "active", "state",
     "baseline_date", "baseline_locked_at", "baseline_locked_by_id",
     "control_period_mode", "crew_count", "critical_activity_count",
     "execution_ready", "execution_readiness_pct", "earned_amount",
@@ -80,7 +82,8 @@ LINE_FIELDS = [
     "id", "name", "code", "parent_id", "level", "sequence",
     "duration_days", "generic_start_day", "generic_finish_day",
     "early_start_day", "early_finish_day", "late_start_day", "late_finish_day",
-    "actual_start", "actual_finish", "is_critical", "milestone_category",
+    "actual_start", "actual_finish", "progress_pct",
+    "is_critical", "milestone_category",
     "labor_crew_id", "equipment_crew_id",
 ]
 
@@ -144,6 +147,7 @@ def get_plan(project_id: int, session=Depends(current_session)):
         company=Ref.from_pair(plan_raw.get("company_id")),
         currency=Ref.from_pair(plan_raw.get("currency_id")),
         active=bool(plan_raw.get("active")),
+        state=plan_raw.get("state") or "draft",
         baseline_date=plan_raw.get("baseline_date") or None,
         baseline_locked=bool(locked_at),
         baseline_locked_at=str(locked_at) if locked_at else None,
@@ -171,6 +175,7 @@ def get_plan(project_id: int, session=Depends(current_session)):
             late_finish_day=ln.get("late_finish_day"),
             actual_start=str(ln.get("actual_start")) if ln.get("actual_start") else None,
             actual_finish=str(ln.get("actual_finish")) if ln.get("actual_finish") else None,
+            progress_pct=ln.get("progress_pct") or 0.0,
             is_critical=bool(ln.get("is_critical")),
             milestone_category=ln.get("milestone_category") or None,
             labor_crew=Ref.from_pair(ln.get("labor_crew_id")),

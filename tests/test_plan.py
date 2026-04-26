@@ -65,7 +65,8 @@ def test_plan_returns_full_payload():
             "id": 11, "name": "Plan V1",
             "project_id": [2, "Analisis Patologico BCP"],
             "company_id": [2, "SSA"], "currency_id": [62, "BOB"],
-            "active": True, "baseline_date": "2026-04-13",
+            "active": True, "state": "baseline",
+            "baseline_date": "2026-04-13",
             "baseline_locked_at": "2026-04-14 01:04:18",
             "baseline_locked_by_id": [2, "Administrator"],
             "control_period_mode": "week", "crew_count": 8,
@@ -78,7 +79,7 @@ def test_plan_returns_full_payload():
              "generic_start_day": 1, "generic_finish_day": 8,
              "early_start_day": 1, "early_finish_day": 8,
              "late_start_day": 1, "late_finish_day": 8,
-             "actual_start": False, "actual_finish": False,
+             "actual_start": False, "actual_finish": False, "progress_pct": 0.0,
              "is_critical": False, "milestone_category": False,
              "labor_crew_id": False, "equipment_crew_id": False},
             {"id": 114, "name": "Instalacion de Faenas", "code": "1",
@@ -87,7 +88,7 @@ def test_plan_returns_full_payload():
              "generic_start_day": 1, "generic_finish_day": 3,
              "early_start_day": 1, "early_finish_day": 3,
              "late_start_day": 1, "late_finish_day": 3,
-             "actual_start": False, "actual_finish": False,
+             "actual_start": False, "actual_finish": False, "progress_pct": 0.0,
              "is_critical": False, "milestone_category": False,
              "labor_crew_id": [3, "Cuadrilla MO 1"],
              "equipment_crew_id": False},
@@ -113,6 +114,7 @@ def test_plan_returns_full_payload():
     assert body["plan"]["baseline_locked_by"] == {"id": 2, "name": "Administrator"}
     assert body["plan"]["currency"] == {"id": 62, "name": "BOB"}
     assert body["plan"]["control_period_mode"] == "week"
+    assert body["plan"]["state"] == "baseline"
 
     # Lines
     assert len(body["lines"]) == 2

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, catalog, plan, projects
+from app.api import auth, catalog, plan, plan_write, projects
 from app.core.config import settings
 
 app = FastAPI(
@@ -28,3 +28,4 @@ app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(catalog.router)
 app.include_router(plan.router)
+app.include_router(plan_write.router)
