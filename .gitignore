@@ -1,0 +1,11 @@
+.env
+.env.local
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+schema.md
+.DS_Store
