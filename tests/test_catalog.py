@@ -32,6 +32,12 @@ class FakeClient:
         self.calls.append((model, domain, tuple(fields)))
         return self.data.get(model, [])
 
+    def read(self, model, ids, fields, *, login, password_or_key, **kwargs):
+        self.calls.append((model, "read", tuple(ids)))
+        records = self.data.get(model, [])
+        idset = set(ids)
+        return [r for r in records if r["id"] in idset]
+
 
 def test_catalog_requires_auth():
     with TestClient(app) as client:
@@ -61,11 +67,19 @@ def test_catalog_returns_grouped_payload():
             {"id": 30, "name": "PICADO DE CERAMICA", "rubro_id": [6, "Actividades Previas"],
              "sequence": 10, "uom": "m2", "cantidad_contrato": 23.1,
              "costo_directo": 32.81, "precio_referencia": 64.53, "actual_total_cost": 0.0,
-             "incidence_pct": 1.66, "is_complementary": False},
+             "incidence_pct": 1.66, "is_complementary": False, "line_ids": [101, 102]},
             {"id": 26, "name": "REVOQUE", "rubro_id": [7, "Obra Fina"],
              "sequence": 10, "uom": "m2", "cantidad_contrato": 158.73,
              "costo_directo": 70.43, "precio_referencia": 130.44, "actual_total_cost": 0.0,
-             "incidence_pct": 22.16, "is_complementary": False},
+             "incidence_pct": 22.16, "is_complementary": False, "line_ids": []},
+        ],
+        "apu.line": [
+            {"id": 101, "apu_id": [30, "PICADO DE CERAMICA"], "insumo_id": [60, "ARENA FINA"],
+             "type": "mat", "quantity": 0.05, "uom": "m3", "price_unit": 185.0,
+             "price_subtotal": 9.25, "notes": False},
+            {"id": 102, "apu_id": [30, "PICADO DE CERAMICA"], "insumo_id": [70, "Albañil"],
+             "type": "mo", "quantity": 0.5, "uom": "h", "price_unit": 25.0,
+             "price_subtotal": 12.5, "notes": False},
         ],
         "apu.insumo": [
             {"id": 59, "name": "CAMION VOLQUETA", "type": "eq", "uom": "h",
@@ -97,9 +111,20 @@ def test_catalog_returns_grouped_payload():
     assert body["insumos"][0]["odoo_product"] == {"id": 55, "name": "Camión 10m³"}
     assert body["insumos"][1]["odoo_product"] is None
 
-    # Verifica que se llamaron los 4 modelos correctos
+    # Verifica que se llamaron los 5 modelos correctos
     models = [c[0] for c in fake.calls]
     assert "project.project" in models
     assert "apu.rubro" in models
     assert "apu.item" in models
     assert "apu.insumo" in models
+    assert "apu.line" in models  # batch read
+
+    # El item con líneas las trae con su composición de costo
+    item_with_lines = next(it for it in body["items"] if it["id"] == 30)
+    assert len(item_with_lines["lines"]) == 2
+    types = {ln["type"] for ln in item_with_lines["lines"]}
+    assert types == {"mat", "mo"}
+    assert item_with_lines["lines"][0]["insumo"]["name"] == "ARENA FINA"
+    # Item sin líneas
+    item_no_lines = next(it for it in body["items"] if it["id"] == 26)
+    assert item_no_lines["lines"] == []

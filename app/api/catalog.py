@@ -24,6 +24,18 @@ class RubroOut(BaseModel):
     incidence_pct: float
 
 
+class LineOut(BaseModel):
+    """Una `apu.line`: insumo dentro de un item APU (descompone el costo directo)."""
+    id: int
+    insumo: Ref | None
+    type: str  # mat | mo | eq | sub
+    quantity: float
+    uom: str | None
+    price_unit: float
+    subtotal: float
+    notes: str | None
+
+
 class ItemOut(BaseModel):
     id: int
     name: str
@@ -36,6 +48,7 @@ class ItemOut(BaseModel):
     actual_cost: float
     incidence_pct: float
     is_complementary: bool
+    lines: list[LineOut]
 
 
 class InsumoOut(BaseModel):
@@ -94,11 +107,28 @@ def get_catalog(project_id: int, session=Depends(current_session)):
             [["project_id", "=", project_id]],
             ["id", "name", "rubro_id", "sequence", "uom",
              "cantidad_contrato", "costo_directo", "precio_referencia",
-             "actual_total_cost", "incidence_pct", "is_complementary"],
+             "actual_total_cost", "incidence_pct", "is_complementary",
+             "line_ids"],
             login=session["login"],
             password_or_key=session["key"],
             order="rubro_id asc, sequence asc, name asc",
         )
+
+        # Lectura batch de TODAS las líneas (apu.line) de los items del proyecto
+        all_line_ids: list[int] = []
+        for it in items_raw:
+            all_line_ids.extend(it.get("line_ids") or [])
+        lines_by_id: dict[int, dict] = {}
+        if all_line_ids:
+            lines_raw = client.read(
+                "apu.line",
+                all_line_ids,
+                ["id", "apu_id", "insumo_id", "type", "quantity",
+                 "uom", "price_unit", "price_subtotal", "notes"],
+                login=session["login"],
+                password_or_key=session["key"],
+            )
+            lines_by_id = {ln["id"]: ln for ln in lines_raw}
 
         insumos_raw = client.search_read(
             "apu.insumo",
@@ -135,6 +165,20 @@ def get_catalog(project_id: int, session=Depends(current_session)):
                 actual_cost=it.get("actual_total_cost") or 0.0,
                 incidence_pct=it.get("incidence_pct") or 0.0,
                 is_complementary=bool(it.get("is_complementary")),
+                lines=[
+                    LineOut(
+                        id=ln["id"],
+                        insumo=Ref.from_pair(ln.get("insumo_id")),
+                        type=ln.get("type") or "mat",
+                        quantity=ln.get("quantity") or 0.0,
+                        uom=ln.get("uom") or None,
+                        price_unit=ln.get("price_unit") or 0.0,
+                        subtotal=ln.get("price_subtotal") or 0.0,
+                        notes=ln.get("notes") or None,
+                    )
+                    for ln_id in (it.get("line_ids") or [])
+                    if (ln := lines_by_id.get(ln_id)) is not None
+                ],
             ) for it in items_raw
         ],
         insumos=[
