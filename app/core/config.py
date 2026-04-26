@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     frontend_origin: str = "https://base-project2026.q8waob.easypanel.host"
     cookie_name: str = "tramo_session"
     cookie_secure: bool = True
-    cookie_samesite: str = "lax"
+    # Para gateway cross-subdomain ("base-project2026" ↔ "base-project2026-api")
+    # default debe ser "none" + secure=true. SameSite=lax bloquea la cookie en
+    # fetch cross-origin desde el frontend.
+    cookie_samesite: str = "none"
 
     # Logging
     log_level: str = "INFO"

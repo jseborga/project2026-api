@@ -73,6 +73,55 @@ def logout(response: Response):
     response.delete_cookie(settings.cookie_name)
 
 
+class SwitchCompanyIn(BaseModel):
+    company_id: int
+
+
+@router.post("/switch_company", response_model=SessionOut)
+def switch_company(body: SwitchCompanyIn, response: Response, session=Depends(current_session)):
+    """Cambia la empresa activa sin pedir credenciales nuevamente.
+
+    Valida que la empresa pedida esté en `allowed_company_ids` de la sesión y
+    re-emite la cookie con el nuevo company_id.
+    """
+    if body.company_id not in session["allowed_company_ids"]:
+        raise HTTPException(status_code=403, detail="company_id no permitido para este usuario")
+
+    client = get_client()
+    if client is None:
+        raise HTTPException(status_code=503, detail="Gateway sin Odoo configurado")
+
+    # Releemos sesión para devolver datos frescos (nombre de empresa actualizado)
+    sess = client.authenticate(session["login"], session["key"])
+
+    token = make_token({
+        "uid": session["uid"],
+        "login": session["login"],
+        "key": session["key"],
+        "company_id": body.company_id,
+        "allowed_company_ids": session["allowed_company_ids"],
+    })
+    response.set_cookie(
+        key=settings.cookie_name,
+        value=token,
+        max_age=settings.jwt_ttl_seconds,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+    )
+
+    return SessionOut(
+        uid=sess.uid,
+        user_name=sess.user_name,
+        company_id=body.company_id,
+        company_name=next(
+            (c["name"] for c in sess.allowed_companies if c["id"] == body.company_id),
+            sess.company_name,
+        ),
+        allowed_companies=[CompanyOut(**c) for c in sess.allowed_companies],
+    )
+
+
 @router.get("/me", response_model=SessionOut)
 def me(session=Depends(current_session)):
     client = get_client()
