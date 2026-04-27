@@ -9,3 +9,6 @@ venv/
 *.egg-info/
 schema.md
 .DS_Store
+# SQLite local de dev (Postgres en prod)
+*.db
+*.db-journal

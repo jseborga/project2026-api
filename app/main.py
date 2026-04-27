@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from app.api import auth, catalog, contracts, cost_entries, plan, plan_write, projects
 from app.core.config import settings
+from app.core.db import get_db
 
 app = FastAPI(
     title="Tramo PM API",
@@ -22,6 +25,15 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok", "version": app.version}
+
+
+@app.get("/health/db")
+def health_db(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1")).scalar()
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"db unavailable: {type(e).__name__}")
 
 
 app.include_router(auth.router)

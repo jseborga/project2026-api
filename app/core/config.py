@@ -4,6 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    # Database (gateway propio — usuarios, proyectos nativos, etc.)
+    # Dev default: SQLite local. Prod (EasyPanel): postgresql+psycopg://...
+    database_url: str = "sqlite:///./tramo_pm.db"
+
     # Odoo
     odoo_url: str = ""
     odoo_db: str = ""
