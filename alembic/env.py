@@ -1,6 +1,13 @@
 """Alembic env — usa nuestras settings y descubre modelos via app.models."""
 
+import sys
 from logging.config import fileConfig
+from pathlib import Path
+
+# Cuando alembic se invoca como entry-point (no `python -m`), el cwd no
+# queda en sys.path. Sumamos la raíz del repo para que `from app...` funcione
+# tanto en `alembic ...` directo (Dockerfile CMD) como en `python -m alembic`.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import engine_from_config, pool
 
