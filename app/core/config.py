@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,19 @@ class Settings(BaseSettings):
     # Database (gateway propio — usuarios, proyectos nativos, etc.)
     # Dev default: SQLite local. Prod (EasyPanel): postgresql+psycopg://...
     database_url: str = "sqlite:///./tramo_pm.db"
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalize_db_url(cls, v: str) -> str:
+        # EasyPanel / Heroku / Railway suelen dar "postgres://..." (legacy)
+        # que SQLAlchemy 2.x ya no reconoce. "postgresql://..." sin driver
+        # explícito asume psycopg2, que no está en deps. Forzamos psycopg3
+        # (que sí está) en ambos casos.
+        if v.startswith("postgres://"):
+            return "postgresql+psycopg://" + v[len("postgres://"):]
+        if v.startswith("postgresql://") and not v.startswith("postgresql+"):
+            return "postgresql+psycopg://" + v[len("postgresql://"):]
+        return v
 
     # Odoo
     odoo_url: str = ""

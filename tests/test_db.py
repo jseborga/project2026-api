@@ -85,6 +85,27 @@ def test_health_db_endpoint(tmp_path, monkeypatch):
     reset_engine_for_tests()
 
 
+def test_database_url_normalization():
+    """EasyPanel/Heroku/Railway dan formatos que SQLAlchemy 2.x rechaza."""
+    from app.core.config import Settings
+
+    # postgres:// (legacy Heroku) → postgresql+psycopg://
+    s = Settings(database_url="postgres://u:p@h:5432/db")
+    assert s.database_url == "postgresql+psycopg://u:p@h:5432/db"
+
+    # postgresql:// (sin driver) → postgresql+psycopg://
+    s = Settings(database_url="postgresql://u:p@h:5432/db")
+    assert s.database_url == "postgresql+psycopg://u:p@h:5432/db"
+
+    # postgresql+psycopg:// pasa sin tocar
+    s = Settings(database_url="postgresql+psycopg://u:p@h:5432/db")
+    assert s.database_url == "postgresql+psycopg://u:p@h:5432/db"
+
+    # SQLite no se toca
+    s = Settings(database_url="sqlite:///./local.db")
+    assert s.database_url == "sqlite:///./local.db"
+
+
 def test_alembic_migration_runs_on_empty_db(tmp_path, monkeypatch):
     """La migración 0001 debe correr sin errores y crear la tabla users."""
     import os
